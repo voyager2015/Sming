@@ -1,6 +1,5 @@
 #include <user_config.h>
 #include <SmingCore/SmingCore.h>
-#include <Libraries/LiquidCrystal/LiquidCrystal_I2C.h>
 
 ///////////////////////////////////////////////////////////////////
 // Set your SSID & Pass for initial configuration
@@ -14,37 +13,64 @@ FTPServer ftp;
 
 void connectOk();
 void connectFail();
+void listNetworks(bool succeeded, BssList list);
 
 void init()
 {
-	Serial.begin(SERIAL_BAUD_RATE); // 115200 by default
+	Serial.begin(SERIAL_BAUD_RATE); // SERIAL_BAUD_RATE has been set to 74880 in user_config.h
 	Serial.systemDebugOutput(true); // Debug output to serial
+
+	// load saved config for AP;enable STA mode ensure softAP mode is disabled
 	AppConfig myConfig = loadConfig();
 	WifiStation.config(myConfig.NetworkSSID, myConfig.NetworkPassword);
 	WifiStation.enable(true);
 	WifiAccessPoint.enable(false);
+
+	// start scan for wifi networks and wait to see if we can connect or not
+	WifiStation.startScan(listNetworks);
 	WifiStation.waitConnection(connectOk, 15, connectFail);
 }
 
 void connectOk()
 {
 	debugf("Connect to AP successful");
+
+	// disable softAP mode
 	WifiAccessPoint.enable(false);
 
-	// Start FTP server
-	ftp.listen(21);
-	ftp.addUser("me", "123"); // FTP account
+	// start webserver
 	startWebServer();
 }
 
 void connectFail()
 {
 	debugf("Connect to AP failed");
-	WifiAccessPoint.config("Sming_AP", "", AUTH_OPEN);
+
+	// config softAP mode
+	WifiAccessPoint.config(SOFTAP_SSID, "", AUTH_OPEN);
 	WifiAccessPoint.enable(true);
 
-	// Start FTP server
-	ftp.listen(21);
-	ftp.addUser("me", "123"); // FTP account
+	// start webserver
 	startWebServer();
+}
+
+// Will be called when WiFi station network scan was completed
+void listNetworks(bool succeeded, BssList list)
+{
+	if (!succeeded)
+	{
+		debugf("Failed to scan networks");
+		return;
+	}
+
+	AppConfig myConfig = loadConfig();
+	myConfig.SSIDList.clear();
+
+	for (int i = 0; i < list.count(); i++)
+	{
+		if (list[i].ssid != "") {
+			myConfig.SSIDList.add(list[i].ssid);
+		}
+	}
+	saveConfig(myConfig);
 }

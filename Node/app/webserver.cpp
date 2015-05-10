@@ -11,16 +11,19 @@ void onConfiguration(HttpRequest &request, HttpResponse &response)
 	AppConfig cfg = loadConfig();
 	if (request.getRequestMethod() == RequestMethod::POST)
 	{
-		Serial.println("Update config");
+		debugf("Update config");
 		// Update config
 		if (request.getPostParameter("SSID").length() > 0) // Network
 		{
 			cfg.NetworkSSID = request.getPostParameter("SSID");
 			cfg.NetworkPassword = request.getPostParameter("Password");
+			debugf("SSID set to %s", cfg.NetworkSSID.c_str());
 		}
-
 		saveConfig(cfg);
 		response.redirect();
+
+		// TODO: currently need to manually reboot for change to take effect, decide best way to handle change of AP credentials
+		//WifiStation.config(cfg.NetworkSSID, cfg.NetworkPassword);
 	}
 
 	debugf("Send template");
@@ -28,6 +31,21 @@ void onConfiguration(HttpRequest &request, HttpResponse &response)
 	auto &vars = tmpl->variables();
 	vars["SSID"] = cfg.NetworkSSID;
 	response.sendTemplate(tmpl);
+}
+
+void onAjaxAPs(HttpRequest &request, HttpResponse &response)
+{
+	AppConfig cfg = loadConfig();
+	debugf("current ssid:", cfg.NetworkSSID.c_str());
+
+	JsonObjectStream* stream = new JsonObjectStream();
+	JsonObject& json = stream->getRoot();
+	JsonArray& aps = json.createNestedArray("aps");
+	debugf("ssid count: %d", cfg.SSIDList.count());
+	for (int i = 0; i < cfg.SSIDList.count(); i++) {
+		aps.add(cfg.SSIDList[i].c_str());
+	}
+	response.sendJsonObject(stream);
 }
 
 void onFile(HttpRequest &request, HttpResponse &response)
@@ -52,6 +70,7 @@ void startWebServer()
 
 	server.listen(80);
 	server.addPath("/", onConfiguration);
+	server.addPath("/aps",onAjaxAPs);
 	server.setDefaultHandler(onFile);
 	serverStarted = true;
 
@@ -62,38 +81,5 @@ void startWebServer()
 	else if (WifiStation.isEnabled())
 	{
 		debugf("STA: %s", WifiStation.getIP().toString().c_str());
-	}
-}
-
-/// FileSystem Initialization ///
-
-	HttpClient downloadClient;
-	int dowfid = 0;
-	Timer downloadTimer;
-void downloadContentFiles()
-{
-	if (!downloadTimer.isStarted())
-	{
-		downloadTimer.initializeMs(3000, downloadContentFiles).start();
-	}
-
-	if (downloadClient.isProcessing()) return; // Please, wait.
-	Serial.println("DownloadContentFiles");
-
-	if (downloadClient.isSuccessful())
-	dowfid++;// Success. Go to next file!
-	downloadClient.reset();// Reset current download status
-
-	if (dowfid == 0)
-	downloadClient.downloadFile("http://danielwalters.duckdns.org/config.html", "config.html");
-	else if (dowfid == 1)
-	downloadClient.downloadFile("http://danielwalters.duckdns.org/bootstrap.css.gz","bootstrap.css.gz");
-	else if (dowfid == 2)
-	downloadClient.downloadFile("http://danielwalters.duckdns.org/jquery.js.gz","jquery.js.gz");
-	else
-	{
-		// Content download was completed
-		downloadTimer.stop();
-		startWebServer();
 	}
 }

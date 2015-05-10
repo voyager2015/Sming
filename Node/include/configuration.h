@@ -7,21 +7,14 @@
 // Default SSID and Password here
 #define WIFI_SSID ""
 #define WIFI_PWD ""
-
-// Pin for communication with DHT sensor
-//#define DHT_PIN 1 // UART0 TX pin
-#define DHT_PIN 12
-
-// Pin for trigger control output
-//#define CONTROL_PIN 3 // UART0 RX pin
-#define CONTROL_PIN 15
-
+#define SOFTAP_SSID "Sming_Device"
 #define CONFIG_FILE ".conf" // leading point for security reasons :)
 
 struct AppConfig
 {
 	String NetworkSSID;
 	String NetworkPassword;
+	Vector<String> SSIDList;
 };
 
 AppConfig loadConfig();

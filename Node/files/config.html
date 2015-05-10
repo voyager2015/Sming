@@ -11,6 +11,18 @@
     <!-- Bootstrap core -->
     <link href="bootstrap.css" rel="stylesheet">
 	<script src="jquery.js"></script>
+	<script>
+$(function () {
+    (function worker() {
+          $.getJSON('/aps', function (response) {
+            $.each(response.aps, function (i, item) {
+                $('<option>').append(item).appendTo('#SSID');
+            });
+        });
+    })();
+});
+	
+	</script>
 	<style>
 		.main { font-size: 63px; }
 	</style>
@@ -26,7 +38,7 @@
 
     <div class="container">
       <div class="header">
-        <h3 class="text-muted">Device Control</h3>
+        <h3 class="text-muted">Device Setup</h3>
       </div>
 	  
 	  <div class="row">
@@ -42,7 +54,7 @@
 				  <form method="POST">
 					  <div class="form-group">
 						<label>Name</label>
-						<input type="text" name="SSID" class="form-control" placeholder="Enter SSID" value="{SSID}">
+						<select name="SSID" id="SSID" class="form-control"></select>
 					  </div>
 					  <div class="form-group">
 						<label for="exampleInputPassword1">Password</label>
@@ -61,5 +73,7 @@
       </div>
 
     </div> <!-- /container -->
+  
+
   </body>
 </html>

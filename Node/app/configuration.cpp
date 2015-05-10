@@ -14,10 +14,18 @@ AppConfig loadConfig()
 		char* jsonString = new char[size + 1];
 		fileGetContent(CONFIG_FILE, jsonString, size + 1);
 		JsonObject& root = jsonBuffer.parseObject(jsonString);
-
 		JsonObject& network = root["network"];
-		cfg.NetworkSSID = String((const char*)network["ssid"]);
-		cfg.NetworkPassword = String((const char*)network["password"]);
+
+		JsonArray& aps = root["aps"];
+
+		Vector<String> ssidList;
+		for (int i = 0; i < aps.size(); i++) {
+			ssidList.add(aps[i].asString());
+		}
+
+		cfg.NetworkSSID = String((const char*) network["ssid"]);
+		cfg.NetworkPassword = String((const char*) network["password"]);
+		cfg.SSIDList = ssidList;
 
 		delete[] jsonString;
 	}
@@ -41,9 +49,15 @@ void saveConfig(AppConfig& cfg)
 	network["ssid"] = cfg.NetworkSSID.c_str();
 	network["password"] = cfg.NetworkPassword.c_str();
 
+	JsonArray& aps = jsonBuffer.createArray();
+	for (int i = 0; i < cfg.SSIDList.count(); i++)
+	{
+		aps.add(cfg.SSIDList[i].c_str());
+	}
+	root["aps"] = aps;
+
 	char buf[3048];
 	root.prettyPrintTo(buf, sizeof(buf));
 	fileSetContent(CONFIG_FILE, buf);
 }
-
 
